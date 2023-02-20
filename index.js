@@ -1,64 +1,56 @@
 const express = require('express');
 const app = express();
+const cors = require('cors');
 
+// Enable CORS middleware
+const corsOptions = { optionsSuccessStatus: 200 };
+app.use(cors(corsOptions));
+
+// Serve static files
+app.use(express.static('public'));
+
+
+// Check if a date is valid
 function isValidDate(date) {
-  return date.toString() !== "Invalid Date";
+  return date?.toString() !== "Invalid Date";
 }
 
+// Convert a date string to a Date object
 function getDateFromString(stringDate) {
-
-  if (!stringDate || stringDate.length === 0)
+  if (!stringDate?.length)
     return new Date();
 
   const utcDate = new Date(stringDate);
   const unixDate = new Date(Number(stringDate));
 
-  if (isValidDate(unixDate))
-    return unixDate;
-
-  if (isValidDate(utcDate))
-    return utcDate;
-
-  return null;
+  return isValidDate(unixDate) ? unixDate : (isValidDate(utcDate) ? utcDate : null);
 }
 
-
-
-
-var cors = require('cors');
-app.use(cors({ optionsSuccessStatus: 200 }));  
-
-
-app.use(express.static('public'));
-
-
-app.get("/", function(req, res) {
+// Serve HTML file
+function serveIndex(req, res) {
   res.sendFile(__dirname + '/views/index.html');
-});
+}
 
+// Handle API requests
+function handleApiRequest(req, res) {
+  const { date } = req.params;
+  const parsedDate = getDateFromString(date);
 
-
-
-app.get('/api/:date?', (req, res) => {
-
-  const strDate = req.params.date;
-  const date = getDateFromString(strDate);
-
-  if (!date) {
+  if (!parsedDate) {
     return res.json({
       error: "Invalid Date"
     });
   }
 
   return res.json({
-    unix: date.getTime(),
-    utc: date.toUTCString(),
+    unix: parsedDate.getTime(),
+    utc: parsedDate.toUTCString(),
   }); 
-})
+}
 
+app.get("/", serveIndex);
+app.get('/api/:date?', handleApiRequest);
 
-
-
-var listener = app.listen(process.env.PORT, function() {
-  console.log('Your app is listening on port ' + listener.address().port);
-});
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Accepting connections.`));
